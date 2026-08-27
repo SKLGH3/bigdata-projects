@@ -1,0 +1,15 @@
+*.class
+*.jar
+target/
+*.log
+logs/
+.idea/
+*.iml
+.DS_Store
+*.position.json
+
+# 临时文件
+*.swp
+*.swo
+*~
+.DS_Store
