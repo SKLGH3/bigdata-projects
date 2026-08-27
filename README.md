@@ -153,3 +153,7 @@ bigdata-projects/
 5. **DolphinScheduler 数据库** → PostgreSQL 改 MySQL，驱动复制
 6. **DolphinScheduler 端口冲突** → 8080 被占用，改 12345
 7. **DolphinScheduler ZK 连接** → localhost 改集群地址
+## 项目状态
+- ✅ 离线数仓：已完成，含四层建模与调度自动化
+- ✅ 实时采集：已完成，含自定义Sink与性能调优
+- 🚧 下一步：Flink 实时计算项目实践中
