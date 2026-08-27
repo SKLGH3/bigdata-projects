@@ -1,0 +1,155 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+<!-- jdbc连接的URL -->
+<property>
+<name>javax.jdo.option.ConnectionURL</name>
+<value>jdbc:mysql://hadoop142:3306/metastore?useSSL=false</value>
+</property>
+<!-- jdbc连接的Driver-->
+<property>
+<name>javax.jdo.option.ConnectionDriverName</name>
+<value>com.mysql.jdbc.Driver</value>
+</property>
+<!-- jdbc连接的username-->
+<property>
+<name>javax.jdo.option.ConnectionUserName</name>
+<value>root</value>
+</property>
+<!-- jdbc连接的password -->
+<property>
+<name>javax.jdo.option.ConnectionPassword</name>
+<value>123456</value>
+</property>
+<!-- Hive默认在HDFS的工作目录 -->
+<property>
+<name>hive.metastore.warehouse.dir</name>
+<value>/user/hive/warehouse</value>
+</property>
+<!-- 指定hiveserver2连接的host -->
+<property>
+<name>hive.server2.thrift.bind.host</name>
+<value>0.0.0.0</value>
+</property>
+<!-- 指定hiveserver2连接的端口号 -->
+<property>
+<name>hive.server2.thrift.port</name>
+<value>10000</value>
+</property>
+<property>
+<name>hive.zookeeper.quorum</name>
+<value>hadoop142,hadoop143,hadoop144</value>
+</property>
+<property>
+<name>hive.zookeeper.client.port</name>
+<value>2181</value>
+</property>
+<!-- ===== MapReduce引擎优化参数（替代Tez） ===== -->
+
+<!-- 开启任务并行执行 -->
+<property>
+    <name>hive.exec.parallel</name>
+    <value>true</value>
+</property>
+
+<!-- 并行度 -->
+<property>
+    <name>hive.exec.parallel.thread.number</name>
+    <value>16</value>
+</property>
+
+<!-- 开启Map端聚合（减少Shuffle数据量） -->
+<property>
+    <name>hive.map.aggr</name>
+    <value>true</value>
+</property>
+
+<!-- Map端聚合阈值 -->
+<property>
+    <name>hive.groupby.mapaggr.checkinterval</name>
+    <value>100000</value>
+</property>
+
+<!-- 数据倾斜时自动优化 -->
+<property>
+    <name>hive.groupby.skewindata</name>
+    <value>true</value>
+</property>
+
+<!-- 每个Map处理的最大文件大小（256MB） -->
+<property>
+    <name>mapred.max.split.size</name>
+    <value>268435456</value>
+</property>
+
+<!-- 每个Map最小处理大小（128MB） -->
+<property>
+    <name>mapred.min.split.size</name>
+    <value>134217728</value>
+</property>
+
+<!-- 开启小文件合并 -->
+<property>
+    <name>hive.merge.mapfiles</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.merge.mapredfiles</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.merge.size.per.task</name>
+    <value>268435456</value>
+</property>
+
+<property>
+    <name>hive.merge.smallfiles.avgsize</name>
+    <value>16777216</value>
+</property>
+
+<!-- 开启向量化查询 -->
+<property>
+    <name>hive.vectorized.execution.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.vectorized.execution.reduce.enabled</name>
+    <value>true</value>
+</property>
+
+<!-- 开启自动优化（CBO） -->
+<property>
+    <name>hive.cbo.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.compute.query.using.stats</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.stats.fetch.column.stats</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.stats.fetch.partition.stats</name>
+    <value>true</value>
+</property>
+
+<!-- 动态分区优化 -->
+<property>
+    <name>hive.exec.dynamic.partition</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.exec.dynamic.partition.mode</name>
+    <value>nonstrict</value>
+</property>
+</configuration>
