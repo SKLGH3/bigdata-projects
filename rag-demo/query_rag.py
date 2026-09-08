@@ -56,16 +56,20 @@ def format_context(documents: list[Document]) -> str:
     )
 
 
-def extractive_fallback(documents: list[Document]) -> str:
-    """无 API Key 时输出可演示的检索式答案，而不是伪装成 LLM 生成。"""
+def format_retrieval_results(documents: list[Document], reason: str) -> str:
+    """输出纯检索结果，不调用 LLM。"""
     if not documents:
         return "知识库中没有检索到相关电影。"
-    lines = ["未配置 API Key，当前展示本地向量检索结果："]
+    lines = [f"{reason}，当前展示本地向量检索结果："]
     crawl_dates: set[str] = set()
     for index, document in enumerate(documents, start=1):
         meta = document.metadata
         box_office = meta.get("box_office_yi", -1)
-        box_text = "暂无票房数据" if box_office is None or float(box_office) < 0 else f"票房约 {float(box_office):.2f} 亿元"
+        box_text = (
+            "暂无票房数据"
+            if box_office is None or float(box_office) < 0
+            else f"票房约 {float(box_office):.2f} 亿元"
+        )
         lines.append(
             f"{index}. 《{meta.get('title', '未知')}》：评分 {float(meta.get('rating', 0)):.1f}，"
             f"导演 {meta.get('director', '未知')}，{box_text}。[{index}]"
@@ -74,16 +78,22 @@ def extractive_fallback(documents: list[Document]) -> str:
             crawl_dates.add(str(meta["crawl_date"]))
     if crawl_dates:
         lines.append(f"知识库采集日期：{', '.join(sorted(crawl_dates))}")
-    lines.append("配置 OPENAI_API_KEY 后，将由 LLM 基于以上片段组织完整回答。")
     return "\n".join(lines)
 
 
-def answer_question(vector_store: Chroma, question: str, top_k: int = TOP_K) -> str:
+def answer_question(
+    vector_store: Chroma,
+    question: str,
+    top_k: int = TOP_K,
+    use_llm: bool = True,
+) -> str:
     documents = retrieve(vector_store, question, top_k)
     if not documents:
         return "知识库中没有足够信息。"
+    if not use_llm:
+        return format_retrieval_results(documents, "已启用 --no-llm")
     if not OPENAI_API_KEY:
-        return extractive_fallback(documents)
+        return format_retrieval_results(documents, "未配置 API Key")
 
     kwargs = {
         "model": LLM_MODEL,
@@ -109,6 +119,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--question", help="单次提问；不传则进入交互模式")
     parser.add_argument("--top-k", type=int, default=TOP_K, help="召回片段数量")
     parser.add_argument("--persist-dir", type=Path, default=CHROMA_DIR, help="Chroma 目录")
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="仅输出向量检索结果，不调用大模型 API",
+    )
     return parser.parse_args()
 
 
@@ -117,7 +132,14 @@ def main() -> None:
     vector_store = create_vector_store(args.persist_dir)
 
     if args.question:
-        print(answer_question(vector_store, args.question, args.top_k))
+        print(
+            answer_question(
+                vector_store,
+                args.question,
+                args.top_k,
+                use_llm=not args.no_llm,
+            )
+        )
         return
 
     print("电影知识库已加载。输入问题开始问答，输入 exit 退出。")
@@ -133,7 +155,13 @@ def main() -> None:
         if not question:
             continue
         try:
-            print(f"\n助手：{answer_question(vector_store, question, args.top_k)}")
+            answer = answer_question(
+                vector_store,
+                question,
+                args.top_k,
+                use_llm=not args.no_llm,
+            )
+            print(f"\n助手：{answer}")
         except Exception as exc:
             print(f"\n问答失败：{exc}")
 
