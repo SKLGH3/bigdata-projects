@@ -13,3 +13,10 @@ logs/
 *.swo
 *~
 .DS_Store
+
+# RAG Demo 本地配置与生成文件
+.env
+rag-demo/.env
+rag-demo/chroma_db/
+**/__pycache__/
+*.py[cod]
