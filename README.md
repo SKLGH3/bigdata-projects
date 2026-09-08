@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | [离线数仓](./离线数仓-电商分析) | Hive + Sqoop + DolphinScheduler | 四层数仓建模，产出业务指标 + AI 数据集 | 离线分析 / 模型训练数据准备 |
 | [实时采集](./实时采集-Flume-HBase-Phoenix) | Flume + HBase + Phoenix + Java | 用户行为实时入库，支撑在线特征查询 | 实时特征库 / 模型推理数据源 |
-| [RAG 知识库问答](./rag-demo) | LangChain + Chroma + OpenAI-compatible API | 将清洗后的电影数据构建为本地向量知识库 | AI 应用开发 / RAG 最小闭环 |
+| [RAG 知识库问答](./rag-demo) | LangChain + Chroma + OpenAI-compatible API | 将 7,665 条清洗后的电影数据构建为本地向量知识库 | AI 应用开发 / RAG 最小闭环 |
 
 
 ## 项目亮点
@@ -16,7 +16,7 @@
 - **离线数仓**：四层建模 + Hive MR 参数调优，ETL 耗时从 90 分钟降至 45 分钟
 - **实时采集**：自定义 PhoenixSink，吞吐量从 500 条/秒提升至 5000 条/秒
 - **RAG Demo**：实现从 CSV 清洗、向量化、检索到 LLM 生成的完整闭环，支持本地运行
-- **踩坑记录**：沉淀数仓、调度、实时采集与 RAG 的实战问题，体现故障排查能力
+- **踩坑记录**：沉淀 4 个实战问题及解决方案，覆盖数仓、调度、实时采集与 RAG，体现故障排查能力
 
 ---
 

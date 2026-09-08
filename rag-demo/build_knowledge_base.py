@@ -22,7 +22,6 @@ REQUIRED_COLUMNS = {
     "country",
     "genres",
     "rating",
-    "box_office_yi",
     "director",
     "actors",
     "summary",
@@ -53,8 +52,10 @@ def load_and_clean_movies(csv_path: Path) -> tuple[pd.DataFrame, dict[str, int]]
             frame[column] = frame[column].map(clean_text)
 
     frame["rating"] = pd.to_numeric(frame["rating"], errors="coerce")
-    frame["box_office_yi"] = pd.to_numeric(frame["box_office_yi"], errors="coerce")
     frame["year"] = pd.to_numeric(frame["year"], errors="coerce").astype("Int64")
+    for numeric_column in ["votes", "runtime_min", "budget_usd", "gross_usd", "box_office_yi"]:
+        if numeric_column in frame.columns:
+            frame[numeric_column] = pd.to_numeric(frame[numeric_column], errors="coerce")
 
     frame = frame.dropna(subset=["title", "year", "rating"])
     frame = frame[(frame["title"].str.len() >= 2) & (frame["summary"].str.len() >= 10)]
@@ -71,34 +72,56 @@ def load_and_clean_movies(csv_path: Path) -> tuple[pd.DataFrame, dict[str, int]]
 
 def movie_to_document(row: pd.Series) -> Document:
     """把一条结构化电影记录转换为适合检索的文本。"""
-    box_office = "暂无" if pd.isna(row["box_office_yi"]) else f"{row['box_office_yi']:.2f} 亿元"
-    content = "\n".join(
-        [
-            f"片名：{row['title']}",
-            f"上映年份：{int(row['year'])}",
-            f"国家/地区：{row['country']}",
-            f"类型：{row['genres']}",
-            f"评分：{row['rating']:.1f}",
-            f"票房：{box_office}",
-            f"导演：{row['director']}",
-            f"演员：{row['actors']}",
-            f"简介：{row['summary']}",
-            f"采集日期：{row['crawl_date']}",
-        ]
-    )
+    def value(name: str, default: str = "暂无") -> str:
+        if name not in row or pd.isna(row[name]) or str(row[name]).strip() == "":
+            return default
+        return str(row[name]).strip()
+
+    def numeric(name: str, suffix: str = "", default: str = "暂无") -> str:
+        if name not in row or pd.isna(row[name]):
+            return default
+        number = float(row[name])
+        rendered = f"{number:,.0f}" if number.is_integer() else f"{number:,.2f}"
+        return f"{rendered}{suffix}"
+
+    if "gross_usd" in row:
+        box_office = numeric("gross_usd", " 美元")
+    else:
+        box_office = numeric("box_office_yi", " 亿元")
+
+    fields = [
+        f"片名：{value('title')}",
+        f"上映年份：{int(row['year'])}",
+        f"国家/地区：{value('country')}",
+        f"类型：{value('genres')}",
+        f"IMDb 用户评分：{float(row['rating']):.1f}",
+        f"评分人数：{numeric('votes')}",
+        f"票房：{box_office}",
+        f"预算：{numeric('budget_usd', ' 美元')}",
+        f"导演：{value('director')}",
+        f"编剧：{value('writer')}",
+        f"主演：{value('actors')}",
+        f"制作公司：{value('company')}",
+        f"片长：{numeric('runtime_min', ' 分钟')}",
+        f"简介：{value('summary')}",
+        f"数据获取日期：{value('crawl_date')}",
+        f"数据来源：{value('source')}",
+    ]
+    content = "\n".join(fields)
     metadata = {
-        "title": str(row["title"]),
+        "title": value("title", ""),
         "year": int(row["year"]),
-        "country": str(row["country"]),
-        "genres": str(row["genres"]),
+        "country": value("country", ""),
+        "genres": value("genres", ""),
         "rating": float(row["rating"]),
-        "box_office_yi": -1.0 if pd.isna(row["box_office_yi"]) else float(row["box_office_yi"]),
-        "director": str(row["director"]),
-        "actors": str(row["actors"]),
-        "crawl_date": str(row["crawl_date"]),
+        "votes": -1 if "votes" not in row or pd.isna(row["votes"]) else int(row["votes"]),
+        "gross_usd": -1.0 if "gross_usd" not in row or pd.isna(row["gross_usd"]) else float(row["gross_usd"]),
+        "director": value("director", ""),
+        "actors": value("actors", ""),
+        "crawl_date": value("crawl_date", ""),
+        "source": value("source", ""),
     }
     return Document(page_content=content, metadata=metadata)
-
 
 def build_knowledge_base(csv_path: Path, persist_dir: Path, reset: bool = True) -> None:
     frame, stats = load_and_clean_movies(csv_path)

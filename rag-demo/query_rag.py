@@ -64,11 +64,11 @@ def format_retrieval_results(documents: list[Document], reason: str) -> str:
     crawl_dates: set[str] = set()
     for index, document in enumerate(documents, start=1):
         meta = document.metadata
-        box_office = meta.get("box_office_yi", -1)
+        gross_usd = meta.get("gross_usd", -1)
         box_text = (
             "暂无票房数据"
-            if box_office is None or float(box_office) < 0
-            else f"票房约 {float(box_office):.2f} 亿元"
+            if gross_usd is None or float(gross_usd) < 0
+            else f"全球票房约 {float(gross_usd):,.0f} 美元"
         )
         lines.append(
             f"{index}. 《{meta.get('title', '未知')}》：评分 {float(meta.get('rating', 0)):.1f}，"

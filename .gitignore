@@ -20,3 +20,5 @@ rag-demo/.env
 rag-demo/chroma_db/
 **/__pycache__/
 *.py[cod]
+
+rag-demo/.venv/
