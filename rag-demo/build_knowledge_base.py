@@ -16,6 +16,9 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from config import CHROMA_DIR, COLLECTION_NAME, DATA_PATH, EMBEDDING_MODEL
 
+CHROMA_WRITE_BATCH_SIZE = 500
+CHROMA_SYNC_THRESHOLD = 100_000
+
 REQUIRED_COLUMNS = {
     "title",
     "year",
@@ -145,15 +148,33 @@ def build_knowledge_base(csv_path: Path, persist_dir: Path, reset: bool = True) 
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
-    Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
+    # Chroma 1.x 在 Windows 上一次性写入大量向量时，可能只生成
+    # index_metadata.pickle 而没有完整 HNSW 文件。显式创建集合并分批写入，
+    # 同时提高同步阈值，避免下次进程启动时加载到半成品索引。
+    vector_store = Chroma(
         collection_name=COLLECTION_NAME,
         persist_directory=str(persist_dir),
-        ids=[f"movie-{index}" for index in range(len(chunks))],
+        embedding_function=embeddings,
+        collection_configuration={
+            "hnsw": {
+                "space": "cosine",
+                "sync_threshold": CHROMA_SYNC_THRESHOLD,
+            }
+        },
     )
+    for start in range(0, len(chunks), CHROMA_WRITE_BATCH_SIZE):
+        batch = chunks[start : start + CHROMA_WRITE_BATCH_SIZE]
+        vector_store.add_documents(
+            documents=batch,
+            ids=[f"movie-{index}" for index in range(start, start + len(batch))],
+        )
+        print(f"- 向量写入进度：{min(start + len(batch), len(chunks))}/{len(chunks)}")
 
-    print("知识库构建完成")
+    # 在构建进程退出前触发一次检索，确保索引可以被实际读取。
+    if not vector_store.similarity_search("电影", k=1):
+        raise RuntimeError("向量库构建后验证失败：未能检索到任何文档。")
+
+    print("知识库构建完成并通过检索验证")
     print(f"- 原始记录：{stats['original_rows']} 条")
     print(f"- 有效记录：{stats['valid_rows']} 条")
     print(f"- 过滤记录：{stats['filtered_rows']} 条")
