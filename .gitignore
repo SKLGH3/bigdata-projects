@@ -22,3 +22,7 @@ rag-demo/chroma_db/
 *.py[cod]
 
 rag-demo/.venv/
+
+# 误创建的本地虚拟环境目录
+rag-demo/python=*/
+rag-demo/.venv-*/

@@ -72,7 +72,9 @@ rag-demo/
 ├── config.py                    # 从环境变量读取配置，不保存密钥
 ├── fetch_movie_data.py         # 公开数据下载、清洗与字段标准化
 ├── build_knowledge_base.py      # CSV → 清洗 → 切片 → 向量库
-├── query_rag.py                 # Query → 检索 → LLM/本地结果
+├── query_rag.py                 # Query → 结构化过滤 → 检索 → LLM/本地结果
+├── app.py                       # Streamlit 可视化问答界面
+├── .streamlit/config.toml       # UI 深色主题配置
 ├── demo_screenshot.png
 └── data/
     ├── movies_source.csv        # 公开原始数据（7,668 条）
@@ -135,4 +137,23 @@ copy .env.example .env          # Windows
 ## 后续计划
 
 - 增加 RAGAS/自定义问题集，评估命中率、忠实度和回答相关性
-- 增加 FastAPI 接口和简单 Web UI，支持在线演示
+- 增加 FastAPI 接口，并将 Streamlit Demo 部署为在线演示
+
+## Web UI
+
+项目提供 Streamlit 可视化界面，支持自然语言条件解析与手动筛选：
+
+- 自动识别评分（如“8 分以上”）、年份、类型、国家/地区
+- 识别“票房最高”“评分最高”“最新”等排序意图
+- 可在侧栏手动覆盖评分、年份、类型、地区和排序方式
+- 支持本地检索模式，无 API Key 也能完整演示
+
+```bash
+streamlit run app.py
+```
+
+浏览器访问 `http://localhost:8501`。如果命令不可用，也可以运行：
+
+```bash
+python -m streamlit run app.py
+```
