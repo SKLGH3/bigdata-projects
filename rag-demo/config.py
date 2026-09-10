@@ -24,4 +24,12 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "800"))
+LLM_DISABLE_THINKING = os.getenv("LLM_DISABLE_THINKING", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 TOP_K = int(os.getenv("TOP_K", "4"))

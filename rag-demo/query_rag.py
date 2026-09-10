@@ -21,6 +21,9 @@ try:
         COLLECTION_NAME,
         EMBEDDING_MODEL,
         LLM_MODEL,
+        LLM_TIMEOUT,
+        LLM_MAX_TOKENS,
+        LLM_DISABLE_THINKING,
         OPENAI_API_KEY,
         OPENAI_BASE_URL,
         TOP_K,
@@ -34,6 +37,14 @@ except ModuleNotFoundError as exc:
     COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "movies_knowledge_base")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
     LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "30"))
+    LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "800"))
+    LLM_DISABLE_THINKING = os.getenv("LLM_DISABLE_THINKING", "true").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "")
     TOP_K = int(os.getenv("TOP_K", "4"))
@@ -216,12 +227,17 @@ def parse_query_filters(question: str) -> QueryFilters:
 def create_vector_store(persist_dir: Path) -> Chroma:
     if not persist_dir.exists():
         raise FileNotFoundError(f"未找到向量库：{persist_dir}\n请先运行 python build_knowledge_base.py")
+    # 查询只使用构建知识库时已下载的模型，禁止 Hugging Face 联网探测。
+    # 否则 Windows 网络不可达时，每次启动会进行多轮 HEAD 重试，看起来像“没有反应”。
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
     from langchain_chroma import Chroma as ChromaStore
     from langchain_huggingface import HuggingFaceEmbeddings
 
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL,
-        model_kwargs={"device": "cpu"},
+        model_kwargs={"device": "cpu", "local_files_only": True},
         encode_kwargs={"normalize_embeddings": True},
     )
     return ChromaStore(
@@ -431,9 +447,16 @@ def answer_from_documents(
         "model": LLM_MODEL,
         "api_key": OPENAI_API_KEY,
         "temperature": 0,
+        "timeout": LLM_TIMEOUT,
+        "max_retries": 1,
+        "max_tokens": LLM_MAX_TOKENS,
     }
     if OPENAI_BASE_URL:
         kwargs["base_url"] = OPENAI_BASE_URL
+    if LLM_DISABLE_THINKING and "deepseek.com" in OPENAI_BASE_URL.lower():
+        # DeepSeek V4 默认启用思考模式。RAG 展示更重视响应速度，默认关闭，
+        # 避免短问题长时间停留在“正在回答”。可通过 .env 重新开启。
+        kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
     response = ChatOpenAI(**kwargs).invoke(
         [
             SystemMessage(content=SYSTEM_PROMPT),
@@ -446,7 +469,10 @@ def answer_from_documents(
             ),
         ]
     )
-    return f"{summary}。\n\n{response.content}"
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    if not content.strip():
+        raise RuntimeError("大模型返回内容为空，请检查模型名称或将 LLM_DISABLE_THINKING 设为 true。")
+    return f"{summary}。\n\n{content}"
 
 
 def answer_question(
